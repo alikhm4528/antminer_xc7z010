@@ -25,6 +25,22 @@ To run qemu simulation for generated petalinux image use the following command
 make petalinux_qemu
 ```
 
+## Vitis
+To build vitis project use the following command
+```
+make vitis_build
+```
+the resulting images will be copied into workspace/build/images
+
+# XVC-Pico
+Here is the link to the pico jtag programmer projects
+```
+https://github.com/kholia/xvc-pico
+```
+and pico-sdk
+```
+https://github.com/raspberrypi/pico-sdk
+```
 
 # Troubleshoots
 * change `XILINX_DIR` and `PETALINUX_DIR` variables in Makefile

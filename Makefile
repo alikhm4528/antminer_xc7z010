@@ -10,13 +10,18 @@ WORKSPACE_DIR=$(PWD)/workspace
 BUILD_DIR=$(WORKSPACE_DIR)/build
 PLATFORM_DIR=$(BUILD_DIR)/platform
 VIVADO_BUILD_DIR=$(BUILD_DIR)/vivado
+
 PETALINUX_BUILD_DIR=$(BUILD_DIR)/petalinux
 PETALINUX_PROJECT_NAME=ax_peta
 PETALINUX_PROJECT_DIR=$(PETALINUX_BUILD_DIR)/$(PETALINUX_PROJECT_NAME)
 
+VITIS_BUILD_DIR=$(BUILD_DIR)/vitis
+IMAGES_DIR=$(BUILD_DIR)/images
+
 # TCL Paths
 BASE_TCL_PATH=$(PWD)/scripts/base.tcl
 BUILD_TCL_PATH=$(PWD)/scripts/build.tcl
+VITIS_TCL_PATH=$(PWD)/scripts/vitis_build.tcl
 
 add_vivado_to_path:
 	PATH=$(PATH):$(VIVADO_BIN_DIR)
@@ -89,3 +94,19 @@ create_vivado_project: vivado_clean add_vivado_to_path
 	vivado -mode gui -log $(VIVADO_BUILD_DIR)/vivado.log \
 		-journal $(VIVADO_BUILD_DIR)/vivado.jou \
 		-source $(BASE_TCL_PATH) -tclargs --origin_dir $(PWD)
+
+vitis_build: vitis_clean
+	mkdir -p $(VITIS_BUILD_DIR)
+	xsct $(VITIS_TCL_PATH) -tclargs \
+	 	--src $(PWD)/src/application \
+		--hw $(PLATFORM_DIR)/$(PROJECT_NAME).xsa \
+		--workspace $(VITIS_BUILD_DIR) \
+		--project_name $(PROJECT_NAME)
+	mkdir -p $(IMAGES_DIR)/$(PROJECT_NAME)
+	cp -f $(VITIS_BUILD_DIR)/$(PROJECT_NAME)_system/Debug/sd_card/BOOT.BIN \
+		$(IMAGES_DIR)/$(PROJECT_NAME)
+	cp -f $(VITIS_BUILD_DIR)/$(PROJECT_NAME)/Debug/$(PROJECT_NAME).elf \
+		$(IMAGES_DIR)/$(PROJECT_NAME)
+
+vitis_clean:
+	rm -rf $(VITIS_BUILD_DIR)

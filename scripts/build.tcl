@@ -1,9 +1,16 @@
-# Define the project and workspace directories
+#################################
+######### Build Script ##########
+#################################
+
+# Generic Variables
 set proj_name "base"
 set origin_dir "."
-set build_dir ${origin_dir}/workspace/build
+set build_dir "${origin_dir}/workspace/build"
 set platform_dir ${build_dir}/platform
-set xsa_output "${platform_dir}/${proj_name}.xsa"
+
+# Config Variables
+set base_script "${origin_dir}/scripts/base.tcl"
+set script_file [file tail [info script]]
 
 # Help information for this script
 proc print_help {} {
@@ -17,19 +24,9 @@ proc print_help {} {
   puts "$script_file"
   puts "$script_file -tclargs \[--origin_dir <path>\]"
   puts "$script_file -tclargs \[--project_name <name>\]"
+  puts "$script_file -tclargs \[--base_script <path>\]"
+  puts "$script_file -tclargs \[--example_dir <path>\]"
   puts "$script_file -tclargs \[--help\]\n"
-  puts "Usage:"
-  puts "Name                   Description"
-  puts "-------------------------------------------------------------------------"
-  puts "\[--origin_dir <path>\]  Determine source file paths wrt this path. Default"
-  puts "                       origin_dir path value is \".\", otherwise, the value"
-  puts "                       that was set with the \"-paths_relative_to\" switch"
-  puts "                       when this script was generated.\n"
-  puts "\[--project_name <name>\] Create project with the specified name. Default"
-  puts "                       name is the name of the project from where this"
-  puts "                       script was generated.\n"
-  puts "\[--help\]               Print help information for this script"
-  puts "-------------------------------------------------------------------------\n"
   exit 0
 }
 
@@ -39,6 +36,8 @@ if { $::argc > 0 } {
     switch -regexp -- $option {
       "--origin_dir"   { incr i; set origin_dir [lindex $::argv $i] }
       "--project_name"    { incr i; set proj_name [lindex $::argv $i] }
+      "--base_script"    { incr i; set base_script [lindex $::argv $i] }
+      "--example_dir"    { incr i; set example_dir [lindex $::argv $i] }
       "--help"         { print_help }
       default {
         if { [regexp {^-} $option] } {
@@ -50,7 +49,11 @@ if { $::argc > 0 } {
   }
 }
 
-source ${origin_dir}/scripts/base.tcl
+# Runtime Variables
+set xsa_output "${platform_dir}/${proj_name}.xsa"
+set example_dir ""
+
+source ${base_script}
 
 # Launch synthesis
 launch_runs synth_1 -jobs 4

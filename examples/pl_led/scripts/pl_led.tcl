@@ -1,11 +1,12 @@
 #################################
-###### Base Vivado Project ######
+##### PL LED Vivado Project #####
 #################################
 
 # Set the reference directory for source file relative paths (by default the value is script directory path)
 set origin_dir "."
-set base_dir "${origin_dir}/workspace/build/vivado"
-set example_dir ""
+set base_dir ${origin_dir}/workspace/build/vivado
+set example_dir ${origin_dir}/example/simple
+set base_script ""
 
 # Use origin directory path location variable, if specified in the tcl shell
 if { [info exists ::origin_dir_loc] } {
@@ -35,6 +36,7 @@ proc print_help {} {
   puts "$script_file -tclargs \[--origin_dir <path>\]"
   puts "$script_file -tclargs \[--project_name <name>\]"
   puts "$script_file -tclargs \[--example_dir <path>\]"
+  puts "$script_file -tclargs \[--base_script <path>\]"
   puts "$script_file -tclargs \[--help\]\n"
   exit 0
 }
@@ -45,7 +47,8 @@ if { $::argc > 0 } {
     switch -regexp -- $option {
       "--origin_dir"   { incr i; set origin_dir [lindex $::argv $i] }
       "--project_name" { incr i; set _xil_proj_name_ [lindex $::argv $i] }
-      "--example_dir" { incr i; set _xil_proj_name_ [lindex $::argv $i] }
+      "--example_dir" { incr i; set example_dir [lindex $::argv $i] }
+      "--base_script" { incr i; set base_script [lindex $::argv $i] }
       "--help"         { print_help }
       default {
         if { [regexp {^-} $option] } {
@@ -92,7 +95,9 @@ if {[string equal [get_filesets -quiet sources_1] ""]} {
 set obj [get_filesets sources_1]
 # Import local files from the original project
 set files [list \
- [file normalize "${origin_dir}/src/hdl/system_wrapper.v"]\
+ [file normalize "${example_dir}/hdl/system_wrapper.v"]\
+ [file normalize "${example_dir}/hdl/top_led.sv"]\
+ [file normalize "${example_dir}/hdl/led.sv"]\
 ]
 set imported_files [import_files -fileset sources_1 $files]
 
@@ -100,7 +105,14 @@ set imported_files [import_files -fileset sources_1 $files]
 # None
 
 # Set 'sources_1' fileset file properties for local files
-# None
+set file "hdl/top_led.sv"
+set file_obj [get_files -of_objects [get_filesets sources_1] [list "*$file"]]
+set_property -name "file_type" -value "SystemVerilog" -objects $file_obj
+
+set file "hdl/led.sv"
+set file_obj [get_files -of_objects [get_filesets sources_1] [list "*$file"]]
+set_property -name "file_type" -value "SystemVerilog" -objects $file_obj
+
 
 # Set 'sources_1' fileset properties
 set obj [get_filesets sources_1]
@@ -114,7 +126,12 @@ if {[string equal [get_filesets -quiet constrs_1] ""]} {
 # Set 'constrs_1' fileset object
 set obj [get_filesets constrs_1]
 
-# Empty (no sources present)
+# Add/Import constrs file and set constrs file properties
+set file "[file normalize ${example_dir}/constraints/board.xdc]"
+set file_imported [import_files -fileset constrs_1 [list $file]]
+set file "constraints/board.xdc"
+set file_obj [get_files -of_objects [get_filesets constrs_1] [list "*$file"]]
+set_property -name "file_type" -value "XDC" -objects $file_obj
 
 # Set 'constrs_1' fileset properties
 set obj [get_filesets constrs_1]
@@ -127,11 +144,24 @@ if {[string equal [get_filesets -quiet sim_1] ""]} {
 
 # Set 'sim_1' fileset object
 set obj [get_filesets sim_1]
-# Empty (no sources present)
+# Import local files from the original project
+set files [list \
+ [file normalize "${example_dir}/tbench/tbench.sv"]\
+]
+set imported_files [import_files -fileset sim_1 $files]
+
+# Set 'sim_1' fileset file properties for remote files
+# None
+
+# Set 'sim_1' fileset file properties for local files
+set file "tbench/tbench.sv"
+set file_obj [get_files -of_objects [get_filesets sim_1] [list "*$file"]]
+set_property -name "file_type" -value "SystemVerilog" -objects $file_obj
+
 
 # Set 'sim_1' fileset properties
 set obj [get_filesets sim_1]
-set_property -name "top" -value "system_wrapper" -objects $obj
+set_property -name "top" -value "tbench" -objects $obj
 set_property -name "top_lib" -value "xil_defaultlib" -objects $obj
 
 # Set 'utils_1' fileset object
@@ -221,6 +251,8 @@ proc cr_bd_system { parentCell } {
 
 
   # Create ports
+  set FCLK_CLK0 [ create_bd_port -dir O -type clk FCLK_CLK0 ]
+  set FCLK_RESET0_N_0 [ create_bd_port -dir O -type rst FCLK_RESET0_N_0 ]
 
   # Create instance: processing_system7_0, and set properties
   set processing_system7_0 [ create_bd_cell -type ip -vlnv xilinx.com:ip:processing_system7:5.5 processing_system7_0 ]
@@ -593,35 +625,38 @@ proc cr_bd_system { parentCell } {
   connect_bd_intf_net -intf_net processing_system7_0_FIXED_IO [get_bd_intf_ports FIXED_IO] [get_bd_intf_pins processing_system7_0/FIXED_IO]
 
   # Create port connections
-  connect_bd_net -net processing_system7_0_FCLK_CLK0 [get_bd_pins processing_system7_0/FCLK_CLK0] [get_bd_pins processing_system7_0/M_AXI_GP0_ACLK]
+  connect_bd_net -net processing_system7_0_FCLK_CLK0 [get_bd_ports FCLK_CLK0] [get_bd_pins processing_system7_0/FCLK_CLK0] [get_bd_pins processing_system7_0/M_AXI_GP0_ACLK]
+  connect_bd_net -net processing_system7_0_FCLK_RESET0_N [get_bd_ports FCLK_RESET0_N_0] [get_bd_pins processing_system7_0/FCLK_RESET0_N]
 
   # Create address segments
 
   # Perform GUI Layout
   regenerate_bd_layout -layout_string {
    "ActiveEmotionalView":"Default View",
-   "Default View_ScaleFactor":"0.980952",
-   "Default View_TopLeft":"-14,0",
+   "Default View_ScaleFactor":"0.919485",
+   "Default View_TopLeft":"0,-46",
    "ExpandedHierarchyInLayout":"",
    "guistr":"# # String gsaved with Nlview 7.0.21  2019-05-29 bk=1.5064 VDI=41 GEI=36 GUI=JA:9.0 TLS
 #  -string -flagsOSRD
 preplace port DDR -pg 1 -lvl 2 -x 440 -y 60 -defaultsOSRD
 preplace port FIXED_IO -pg 1 -lvl 2 -x 440 -y 80 -defaultsOSRD
+preplace port FCLK_CLK0 -pg 1 -lvl 2 -x 440 -y 120 -defaultsOSRD
+preplace port FCLK_RESET0_N_0 -pg 1 -lvl 2 -x 440 -y 140 -defaultsOSRD
 preplace inst processing_system7_0 -pg 1 -lvl 1 -x 220 -y 100 -defaultsOSRD
-preplace netloc processing_system7_0_FCLK_CLK0 1 0 2 20 200 400
+preplace netloc processing_system7_0_FCLK_CLK0 1 0 2 20 200 420
+preplace netloc processing_system7_0_FCLK_RESET0_N 1 1 1 N 140
 preplace netloc processing_system7_0_FIXED_IO 1 1 1 NJ 80
 preplace netloc processing_system7_0_DDR 1 1 1 NJ 60
 levelinfo -pg 1 0 220 440
-pagesize -pg 1 -db -bbox -sgen 0 0 550 210
+pagesize -pg 1 -db -bbox -sgen 0 -20 630 210
 "
 }
 
   # Restore current instance
   current_bd_instance $oldCurInst
 
+  validate_bd_design
   save_bd_design
-common::send_msg_id "BD_TCL-1000" "WARNING" "This Tcl script was generated from a block design that has not been validated. It is possible that design <$design_name> may result in errors during validation."
-
   close_bd_design $design_name 
 }
 # End of cr_bd_system()

@@ -19,9 +19,20 @@ VITIS_BUILD_DIR=$(BUILD_DIR)/vitis
 IMAGES_DIR=$(BUILD_DIR)/images
 
 # TCL Paths
-BASE_TCL_PATH=$(PWD)/scripts/base.tcl
+PROJECT_TCL_PATH=$(PWD)/scripts/base.tcl
 BUILD_TCL_PATH=$(PWD)/scripts/build.tcl
 VITIS_TCL_PATH=$(PWD)/scripts/vitis_build.tcl
+
+EXAMPLE=
+EXAMPLE_DIR=
+EXAMPLE_SRC_DIR=$(PWD)/src/application
+
+ifneq ($(EXAMPLE),)
+	PROJECT_NAME=$(EXAMPLE)
+	EXAMPLE_DIR=$(PWD)/examples/$(EXAMPLE)
+	PROJECT_TCL_PATH=$(EXAMPLE_DIR)/scripts/$(EXAMPLE).tcl
+	EXAMPLE_SRC_DIR=$(EXAMPLE_DIR)/src
+endif
 
 add_vivado_to_path:
 	PATH=$(PATH):$(VIVADO_BIN_DIR)
@@ -80,25 +91,44 @@ petalinux_clean:
 vivado_build: vivado_clean add_vivado_to_path
 	mkdir -p $(PLATFORM_DIR)
 	mkdir -p $(VIVADO_BUILD_DIR)
-	vivado -mode batch -log $(VIVADO_BUILD_DIR)/vivado.log \
-		-journal $(VIVADO_BUILD_DIR)/vivado.jou \
-		-source $(BUILD_TCL_PATH) -tclargs --project_name $(PROJECT_NAME) \
-		--origin_dir $(PWD)
+	@if [ -z "$(EXAMPLE)" ]; then \
+		vivado -mode batch -log $(VIVADO_BUILD_DIR)/vivado.log \
+			-journal $(VIVADO_BUILD_DIR)/vivado.jou \
+			-source $(BUILD_TCL_PATH) -tclargs --project_name $(PROJECT_NAME) \
+			--origin_dir $(PWD) --base_script $(PROJECT_TCL_PATH); \
+	else \
+		vivado -mode batch -log $(VIVADO_BUILD_DIR)/vivado.log \
+			-journal $(VIVADO_BUILD_DIR)/vivado.jou \
+			-source $(BUILD_TCL_PATH) -tclargs --project_name $(PROJECT_NAME) \
+			--origin_dir $(PWD) --base_script $(PROJECT_TCL_PATH) \
+			--example_dir $(EXAMPLE_DIR); \
+	fi
+
+platform_clean:
+	rm -rf $(PLATFORM_DIR)
 
 vivado_clean:
 	rm -rf $(VIVADO_BUILD_DIR)
 
 create_vivado_project: vivado_clean add_vivado_to_path
 	mkdir -p $(VIVADO_BUILD_DIR)
-	cd $(VIVADO_BUILD_DIR)
-	vivado -mode gui -log $(VIVADO_BUILD_DIR)/vivado.log \
-		-journal $(VIVADO_BUILD_DIR)/vivado.jou \
-		-source $(BASE_TCL_PATH) -tclargs --origin_dir $(PWD)
+	@if [ -z "$(EXAMPLE)" ]; then \
+		vivado -mode gui -log $(VIVADO_BUILD_DIR)/vivado.log \
+			-journal $(VIVADO_BUILD_DIR)/vivado.jou \
+			-source $(PROJECT_TCL_PATH) \
+			-tclargs --origin_dir $(PWD); \
+	else \
+		vivado -mode gui -log $(VIVADO_BUILD_DIR)/vivado.log \
+			-journal $(VIVADO_BUILD_DIR)/vivado.jou \
+			-source $(PROJECT_TCL_PATH) \
+			-tclargs --origin_dir $(PWD) \
+			--example_dir $(EXAMPLE_DIR); \
+	fi
 
 vitis_build: vitis_clean
 	mkdir -p $(VITIS_BUILD_DIR)
 	xsct $(VITIS_TCL_PATH) -tclargs \
-	 	--src $(PWD)/src/application \
+	 	--src $(EXAMPLE_SRC_DIR) \
 		--hw $(PLATFORM_DIR)/$(PROJECT_NAME).xsa \
 		--workspace $(VITIS_BUILD_DIR) \
 		--project_name $(PROJECT_NAME)

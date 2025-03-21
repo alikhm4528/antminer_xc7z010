@@ -30,7 +30,23 @@ To build vitis project use the following command
 ```
 make vitis_build
 ```
-the resulting images will be copied into workspace/build/images
+The resulting images will be copied into workspace/build/images
+
+# Make and Build an Example
+## Make
+First of all to make an example, make a subdir in examples directory
+```
+mkdir examples/<example-name>
+```
+Then make a similar structure to other examples. Use template tcl file (use other examples') and write one for your example and name it `<example-name>.tcl`. Then put it in `<example-name>/scripts` directory.
+
+## Build
+To build the example or open vivado projects use the following commands
+```
+make create_vivado_project EXAMPLE=<example-name> # or
+make vivado_build EXAMPLE=<example-name> # or
+make vitis_build EXAMPLE=<example_name>
+```
 
 # XVC-Pico
 Here is the link to the pico jtag programmer projects

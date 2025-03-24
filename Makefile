@@ -116,12 +116,14 @@ create_vivado_project: vivado_clean add_vivado_to_path
 		vivado -mode gui -log $(VIVADO_BUILD_DIR)/vivado.log \
 			-journal $(VIVADO_BUILD_DIR)/vivado.jou \
 			-source $(PROJECT_TCL_PATH) \
-			-tclargs --origin_dir $(PWD); \
+			-tclargs --origin_dir $(PWD) \
+			--project_name $(PROJECT_NAME); \
 	else \
 		vivado -mode gui -log $(VIVADO_BUILD_DIR)/vivado.log \
 			-journal $(VIVADO_BUILD_DIR)/vivado.jou \
 			-source $(PROJECT_TCL_PATH) \
 			-tclargs --origin_dir $(PWD) \
+			--project_name $(PROJECT_NAME) \
 			--example_dir $(EXAMPLE_DIR); \
 	fi
 

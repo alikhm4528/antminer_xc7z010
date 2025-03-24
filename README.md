@@ -58,6 +58,9 @@ and pico-sdk
 https://github.com/raspberrypi/pico-sdk
 ```
 
+# Xilinx Usefull links
+* [Xilinx Embedded Software](https://github.com/Xilinx/embeddedsw/tree/master)
+
 # Troubleshoots
 * change `XILINX_DIR` and `PETALINUX_DIR` variables in Makefile
 * change ip versions in scripts/base.tcl for other vivado versions

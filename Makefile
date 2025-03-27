@@ -60,9 +60,12 @@ petalinux_create_project:
 	@echo "********* Info: project created *********"
 
 petalinux_config_hw:
+	rm -rf $(PLATFORM_DIR)/tmp
+	mkdir -p $(PLATFORM_DIR)/tmp/
+	cp $(PLATFORM_DIR)/$(PROJECT_NAME).xsa $(PLATFORM_DIR)/tmp/system.xsa
 	@cd $(PETALINUX_PROJECT_DIR) && \
 	. $(PETALINUX_DIR)/settings.sh &> /dev/null && \
-	petalinux-config --silentconfig --get-hw-description $(PLATFORM_DIR)
+	petalinux-config --silentconfig --get-hw-description $(PLATFORM_DIR)/tmp
 	@echo "********* Info: config hardware done *********"
 
 petalinux_replace_configs:

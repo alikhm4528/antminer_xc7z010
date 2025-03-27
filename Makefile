@@ -5,6 +5,7 @@ PROJECT_NAME=base
 XILINX_DIR=$(HOME)/Xilinx
 PETALINUX_DIR=$(XILINX_DIR)/Petalinux
 VIVADO_BIN_DIR=$(XILINX_DIR)/2019.2/bin
+DEVICE_TREE_GEN_DIR=$(XILINX_DIR)/device-tree-xlnx
 
 WORKSPACE_DIR=$(PWD)/workspace
 BUILD_DIR=$(WORKSPACE_DIR)/build
@@ -16,12 +17,19 @@ PETALINUX_PROJECT_NAME=ax_peta
 PETALINUX_PROJECT_DIR=$(PETALINUX_BUILD_DIR)/$(PETALINUX_PROJECT_NAME)
 
 VITIS_BUILD_DIR=$(BUILD_DIR)/vitis
+DT_BUILD_DIR=$(BUILD_DIR)/device_tree
 IMAGES_DIR=$(BUILD_DIR)/images
+
+# Device Tree Gen
+FSBL_PATH=$(DT_BUILD_DIR)/device_tree_plat/export/device_tree_plat/sw/device_tree_plat/boot
+DT_PATH=$(DT_BUILD_DIR)/device_tree_plat/ps7_cortexa9_0/device_tree_domain/bsp
+BITSTREAM_PATH=$(DT_BUILD_DIR)/device_tree_plat/hw
 
 # TCL Paths
 PROJECT_TCL_PATH=$(PWD)/scripts/base.tcl
 BUILD_TCL_PATH=$(PWD)/scripts/build.tcl
 VITIS_TCL_PATH=$(PWD)/scripts/vitis_build.tcl
+DTG_TCL_PATH=$(PWD)/scripts/dtg.tcl
 
 EXAMPLE=
 EXAMPLE_DIR=
@@ -58,7 +66,7 @@ petalinux_config_hw:
 	@echo "********* Info: config hardware done *********"
 
 petalinux_replace_configs:
-	cp -rf $(PWD)/configs/* $(PETALINUX_PROJECT_DIR)
+	cp -rf $(PWD)/configs/project-spec/* $(PETALINUX_PROJECT_DIR)/project-spec
 	@echo "********* Info: replace configs done *********"
 # Petalinux Steps ------------------------------
 
@@ -142,3 +150,43 @@ vitis_build: vitis_clean
 
 vitis_clean:
 	rm -rf $(VITIS_BUILD_DIR)
+
+generate_device_tree: add_vivado_to_path device_tree_clean
+	mkdir -p $(DT_BUILD_DIR)
+	xsct $(DTG_TCL_PATH) -tclargs \
+	 	--dt_dir $(DEVICE_TREE_GEN_DIR) \
+		--hw $(PLATFORM_DIR)/$(PROJECT_NAME).xsa \
+		--workspace $(DT_BUILD_DIR) \
+		--project_name $(PROJECT_NAME)
+	mkdir -p $(IMAGES_DIR)/$(PROJECT_NAME)/linux
+	cp -f $(FSBL_PATH)/fsbl.elf \
+		$(IMAGES_DIR)/$(PROJECT_NAME)/linux
+	cp -f $(DT_PATH)/system-top.dts $(DT_PATH)/zynq-7000.dtsi \
+		$(DT_PATH)/pl.dtsi $(DT_PATH)/pcw.dtsi \
+		$(IMAGES_DIR)/$(PROJECT_NAME)/linux
+	cp -f $(BITSTREAM_PATH)/$(PROJECT_NAME).bit \
+		$(IMAGES_DIR)/$(PROJECT_NAME)/linux/system.bit
+	# flatten device tree
+	@cd $(IMAGES_DIR)/$(PROJECT_NAME)/linux && \
+	gcc -I my_dts -E -nostdinc -undef -D__DTS__ \
+		-x assembler-with-cpp -o devicetree.dts system-top.dts && \
+	dtc -I dts -O dtb -o devicetree.dtb devicetree.dts
+
+create_linux_package:
+	mkdir -p $(IMAGES_DIR)/$(PROJECT_NAME)/linux/boot
+	# copy bif and u-boot script
+	cp -f $(PWD)/scripts/boot.bif \
+		$(PWD)/prebuilt/u-boot.elf \
+		$(IMAGES_DIR)/$(PROJECT_NAME)/linux
+	# create BOOT.bin
+	@cd $(IMAGES_DIR)/$(PROJECT_NAME)/linux && \
+	bootgen -image boot.bif -arch zynq -o BOOT.bin -w
+	# copy kernel image
+	cp -f $(PWD)/prebuilt/uImage \
+		$(PWD)/scripts/uEnv.txt \
+		$(IMAGES_DIR)/$(PROJECT_NAME)/linux/BOOT.bin \
+		$(IMAGES_DIR)/$(PROJECT_NAME)/linux/devicetree.dtb \
+		$(IMAGES_DIR)/$(PROJECT_NAME)/linux/boot
+
+device_tree_clean:
+	rm -rf $(DT_BUILD_DIR)

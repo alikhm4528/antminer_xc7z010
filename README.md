@@ -48,6 +48,117 @@ make vivado_build EXAMPLE=<example-name> # or
 make vitis_build EXAMPLE=<example_name>
 ```
 
+# Xilinx Open Source Linux
+To build linux without using petalinux, you have to build components separately.
+## Generating device tree
+To generate a template device tree based on xsa file go through the following procedure.
+
+First clone device tree generator plugin. 
+```
+git clone https://github.com/Xilinx/device-tree-xlnx.git
+```
+
+Do not forget to checkout to the appropriate Xilinx version installed on your computer.
+```
+git checkout xilinx-v2019.2
+```
+
+Then run the following command.
+```
+make generate_device_tree EXAMPLE=<example-name>
+```
+
+This will result `devicetree.dts` and `devicetree.dtb` files in `workspace/build/image/<example-name>/linux` path. 
+
+## Building u-boot and linux kernel
+You can use the prebuilt Linux kernel (`uImage`) from the `prebuilt` directory unless you need to add or remove drivers or kernel modules. Since the device tree and bitstream are not involved in the Linux kernel build process, using the prebuilt kernel will work without any issues.
+
+The same applies to u-boot (secondary bootloader). You can simply replace `devicetree.dtb` and the bitstream in `prebuilt` directory, and everything should work fine unless you require additional hardware support during the boot process.
+
+### Building u-boot
+To build u-boot go through the following procedure.
+
+First clone u-boot repository.
+```
+git clone https://github.com/Xilinx/u-boot-xlnx.git
+```
+
+Do not forget to checkout to the appropriate Xilinx version installed on your computer.
+```
+git checkout xilinx-v2019.2
+```
+
+Then copy config files and device tree into the project and add two lines to the makefile.
+
+```
+u-boot-xlnx/
+|
++-- arch/
+|	|
+| 	+-- arm/
+|		|
+| 		+-- dts/
+|			|
+|			+-- antminer.dts
+|			+-- Makefile
+|				|dtb-$(CONFIG_ARCH_ZYNQ) += \
+|				|    antminer.dtb
+|	 			`----
+|
++-- configs/
+|	|
+|	+-- xilinx_antminer_defconfig
+|	|		|CONFIG_DEFAULT_DEVICETREE="antminer"
+|	|		|CONFIG_SYS_CONFIG_NAME="antminer"
+|	|		`----
+|
++-- include/
+	|
+ 	+-- conf/
+		|
+		+-- antminer.h
+```
+
+Then just build it.
+```
+export ARCH=arm
+export CROSS_COMPILE=arm-linux-gnueabihf-
+make distclean
+make xilinx_antminer_defconfig
+make -j$(nproc)
+```
+
+You can do additionall configs using the following commands.
+```
+make menuconfig
+```
+
+### Building Linux Kernel
+To build linux kernel go through the following procedure.
+
+First clone kernel repository.
+```
+git clone https://github.com/Xilinx/linux-xlnx.git
+```
+
+Do not forget to checkout to the appropriate Xilinx version installed on your computer.
+```
+git checkout xilinx-v2019.2
+```
+
+Then just build it.
+```
+export ARCH=arm
+export CROSS_COMPILE=arm-linux-gnueabihf-
+make ARCH=arm xilinx_zynq_defconfig
+make LOADADDR=0x8000 uImage -j$(nproc)
+```
+
+You can do additionall configs using the following commands.
+```
+make ARCH=arm menuconfig
+```
+
 # XVC-Pico
 Here is the link to the pico jtag programmer projects
 ```

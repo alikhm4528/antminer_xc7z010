@@ -121,6 +121,7 @@ u-boot-xlnx/
 
 Then just build it.
 ```
+export PATH=$PATH:<vitis-install-dir>/gnu/aarch32/lin/gcc-arm-linux-gnueabi/bin
 export ARCH=arm
 export CROSS_COMPILE=arm-linux-gnueabihf-
 make distclean
@@ -148,6 +149,7 @@ git checkout xilinx-v2019.2
 
 Then just build it.
 ```
+export PATH=$PATH:<vitis-install-dir>/gnu/aarch32/lin/gcc-arm-linux-gnueabi/bin
 export ARCH=arm
 export CROSS_COMPILE=arm-linux-gnueabihf-
 make ARCH=arm xilinx_zynq_defconfig
@@ -158,6 +160,29 @@ You can do additionall configs using the following commands.
 ```
 make ARCH=arm menuconfig
 ```
+
+## Building Rootfs
+To build the rootfs go through the following procedure.
+
+First extract template rootfs (`prebuilt/rootfs.cpio.gz`) using the following command.
+```
+make extract_rootfs
+```
+
+Then you can modify the `workspace/build/rootfs`. After that just build rootfs.
+```
+make build_rootfs
+```
+
+This command will create `uRamdisk` and `rootfs.cpio.gz` files on `workspace/build/images/rootfs` path.
+
+## Create Linux Package
+Finally after you prepared everything, simply use the following command to create linux package and necessary files in `workspace/build/images/<example-dir>/linux/boot`
+```
+make create_linux_package EXAMPLE=<example-name> ROOTFS=<ramdisk or sddisk>
+```
+
+If you use the ramdisk option, the root filesystem will be loaded into ram during boot, and any changes will be lost after reboot. However, if you use the sddisk option, the root filesystem will reside on the second partition of the SD card.
 
 # XVC-Pico
 Here is the link to the pico jtag programmer projects

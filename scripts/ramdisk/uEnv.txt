@@ -1,0 +1,28 @@
+autoload=no
+baudrate=115200
+
+bootargs=mem=496M console=ttyPS0,115200n8 ramdisk_size=409600 root=/dev/ram rw rootwait earlyprintk
+
+bootcmd=mmcinfo && \
+    fatload mmc 0:1 0x2000000 uImage && \
+    fatload mmc 0:1 0x4000000 uRamdisk && \
+    fatload mmc 0:1 0x2A00000 devicetree.dtb && \
+    bootm 0x2000000 0x4000000 0x2A00000
+
+bootdelay=8
+boot_targets=mmc0 jtag mmc1 nand
+
+kernel_addr_r=0x2000000
+initrd_addr_r=0x4000000
+loadaddr=0x0
+fdt_high=0xefff000
+initrd_high=0xefff000
+
+mmc_boot=if mmc dev ${devnum}; then devtype=mmc; run scan_dev_for_boot_part; fi
+modeboot=sdboot
+
+pxefile_addr_r=0x2000000
+scriptaddr=0x3000000
+stderr=serial@e0001000
+stdin=serial@e0001000
+stdout=serial@e0001000

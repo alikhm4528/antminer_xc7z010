@@ -3,7 +3,10 @@ baudrate=115200
 
 bootargs=mem=496M console=ttyPS0,115200n8 ramdisk_size=409600 root=/dev/mmcblk0p2 rootfstype=ext4 rw elevator=deadline rootwait
 
-bootcmd=mmcinfo && fatload mmc 0:1 0x3000000 uImage && fatload mmc 0:1 0x2A00000 devicetree.dtb && bootm 0x3000000 - 0x2A00000
+bootcmd=mmcinfo && \
+    fatload mmc 0:1 0x3000000 uImage && \
+    fatload mmc 0:1 0x2A00000 devicetree.dtb && \
+    bootm 0x3000000 - 0x2A00000
 
 bootdelay=8
 boot_targets=mmc0 jtag mmc1 nand

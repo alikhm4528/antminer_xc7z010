@@ -35,6 +35,9 @@ EXAMPLE=
 EXAMPLE_DIR=
 EXAMPLE_SRC_DIR=$(PWD)/src/application
 
+# choose between ramdisk and sddisk
+ROOTFS=ramdisk
+
 ifneq ($(EXAMPLE),)
 	PROJECT_NAME=$(EXAMPLE)
 	EXAMPLE_DIR=$(PWD)/examples/$(EXAMPLE)
@@ -164,8 +167,7 @@ generate_device_tree: add_vivado_to_path device_tree_clean
 	mkdir -p $(IMAGES_DIR)/$(PROJECT_NAME)/linux
 	cp -f $(FSBL_PATH)/fsbl.elf \
 		$(IMAGES_DIR)/$(PROJECT_NAME)/linux
-	cp -f $(DT_PATH)/system-top.dts $(DT_PATH)/zynq-7000.dtsi \
-		$(DT_PATH)/pl.dtsi $(DT_PATH)/pcw.dtsi \
+	cp -f $(DT_PATH)/system-top.dts $(DT_PATH)/*.dtsi \
 		$(IMAGES_DIR)/$(PROJECT_NAME)/linux
 	cp -f $(BITSTREAM_PATH)/$(PROJECT_NAME).bit \
 		$(IMAGES_DIR)/$(PROJECT_NAME)/linux/system.bit
@@ -175,7 +177,7 @@ generate_device_tree: add_vivado_to_path device_tree_clean
 		-x assembler-with-cpp -o devicetree.dts system-top.dts && \
 	dtc -I dts -O dtb -o devicetree.dtb devicetree.dts
 
-create_linux_package:
+create_linux_package: boot_clean
 	mkdir -p $(IMAGES_DIR)/$(PROJECT_NAME)/linux/boot
 	# copy bif and u-boot script
 	cp -f $(PWD)/scripts/boot.bif \
@@ -186,10 +188,41 @@ create_linux_package:
 	bootgen -image boot.bif -arch zynq -o BOOT.bin -w
 	# copy kernel image
 	cp -f $(PWD)/prebuilt/uImage \
-		$(PWD)/scripts/uEnv.txt \
 		$(IMAGES_DIR)/$(PROJECT_NAME)/linux/BOOT.bin \
 		$(IMAGES_DIR)/$(PROJECT_NAME)/linux/devicetree.dtb \
 		$(IMAGES_DIR)/$(PROJECT_NAME)/linux/boot
+	@if [ "$(ROOTFS)" = "ramdisk" ]; then \
+		echo "Copying Ramdisk into boot" && \
+		cp -f $(BUILD_DIR)/images/rootfs/uRamdisk \
+			$(PWD)/scripts/ramdisk/uEnv.txt \
+			$(IMAGES_DIR)/$(PROJECT_NAME)/linux/boot; \
+	else \
+		cp -f $(PWD)/scripts/sddisk/uEnv.txt \
+			$(IMAGES_DIR)/$(PROJECT_NAME)/linux/boot; \
+	fi
+
+boot_clean:
+	rm -rf $(IMAGES_DIR)/$(PROJECT_NAME)/linux/boot
 
 device_tree_clean:
 	rm -rf $(DT_BUILD_DIR)
+
+extract_rootfs: rootfs_clean
+	mkdir -p $(BUILD_DIR)/rootfs
+	cd $(BUILD_DIR)/rootfs && \
+	gunzip -c $(PWD)/prebuilt/rootfs.cpio.gz | cpio -idmv
+
+build_rootfs: rootfs_image_clean
+	mkdir -p $(BUILD_DIR)/images/rootfs
+	cd $(BUILD_DIR)/rootfs && \
+	fakeroot sh -c 'chown -R 0:0 . && \
+		find . | cpio -o -H newc | gzip > \
+		$(BUILD_DIR)/images/rootfs/rootfs.cpio.gz'
+	cd $(BUILD_DIR)/images/rootfs && \
+	mkimage -A arm -O linux -T ramdisk -C gzip -d rootfs.cpio.gz uRamdisk
+
+rootfs_clean:
+	rm -rf $(BUILD_DIR)/rootfs
+
+rootfs_image_clean:
+	rm -rf $(BUILD_DIR)/images/rootfs

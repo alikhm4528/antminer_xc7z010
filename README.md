@@ -184,6 +184,9 @@ make create_linux_package EXAMPLE=<example-name> ROOTFS=<ramdisk or sddisk>
 
 If you use the ramdisk option, the root filesystem will be loaded into ram during boot, and any changes will be lost after reboot. However, if you use the sddisk option, the root filesystem will reside on the second partition of the SD card.
 
+## Add new tools to Linux rootfs
+[Follow this instruction](tools/README.md)
+
 # XVC-Pico
 Here is the link to the pico jtag programmer projects
 ```

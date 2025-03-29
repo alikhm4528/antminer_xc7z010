@@ -50,14 +50,14 @@ if { $::argc > 0 } {
 }
 
 # Runtime Variables
-set xsa_output "${platform_dir}/${proj_name}.xsa"
+set xsa_output "${platform_dir}/${proj_name}/${proj_name}.xsa"
 set example_dir ""
 
 source ${base_script}
 
 # Launch synthesis
 launch_runs synth_1 -jobs 4
-wait_on_run synth_1
+wait_on_run -timeout 85 synth_1
 
 # Check synthesis status
 if {[get_property STATUS [get_runs synth_1]] != "synth_design Complete!"} {
@@ -67,7 +67,7 @@ if {[get_property STATUS [get_runs synth_1]] != "synth_design Complete!"} {
 
 # Launch implementation
 launch_runs impl_1 -to_step write_bitstream -jobs 4
-wait_on_run impl_1
+wait_on_run -timeout 85 impl_1
 
 # Check implementation status
 if {[get_property STATUS [get_runs impl_1]] != "write_bitstream Complete!"} {

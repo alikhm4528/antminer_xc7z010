@@ -9,7 +9,7 @@ DEVICE_TREE_GEN_DIR=$(XILINX_DIR)/device-tree-xlnx
 
 WORKSPACE_DIR=$(PWD)/workspace
 BUILD_DIR=$(WORKSPACE_DIR)/build
-PLATFORM_DIR=$(BUILD_DIR)/platform
+PLATFORM_DIR=
 VIVADO_BUILD_DIR=$(BUILD_DIR)/vivado
 
 PETALINUX_BUILD_DIR=$(BUILD_DIR)/petalinux
@@ -43,12 +43,19 @@ ifneq ($(EXAMPLE),)
 	EXAMPLE_DIR=$(PWD)/examples/$(EXAMPLE)
 	PROJECT_TCL_PATH=$(EXAMPLE_DIR)/scripts/$(EXAMPLE).tcl
 	EXAMPLE_SRC_DIR=$(EXAMPLE_DIR)/src
+	PLATFORM_DIR=$(BUILD_DIR)/platform/$(PROJECT_NAME)
 endif
+
+check_example:
+	@if [ -z "$(EXAMPLE)" ]; then \
+		echo "Error: Please specify EXAMPLE." && \
+		exit 1; \
+	fi
 
 add_vivado_to_path:
 	PATH=$(PATH):$(VIVADO_BIN_DIR)
 
-check_xsa_file_exists:
+check_xsa_file_exists: check_example
 	@if [ ! -f "$(PLATFORM_DIR)/$(PROJECT_NAME).xsa" ]; then \
 		echo "Error: There is no xsa file in $(PLATFORM_DIR)"; \
 		exit 1; \
@@ -62,13 +69,10 @@ petalinux_create_project:
 		--name $(PETALINUX_PROJECT_NAME)
 	@echo "********* Info: project created *********"
 
-petalinux_config_hw:
-	rm -rf $(PLATFORM_DIR)/tmp
-	mkdir -p $(PLATFORM_DIR)/tmp/
-	cp $(PLATFORM_DIR)/$(PROJECT_NAME).xsa $(PLATFORM_DIR)/tmp/system.xsa
+petalinux_config_hw: check_example
 	@cd $(PETALINUX_PROJECT_DIR) && \
 	. $(PETALINUX_DIR)/settings.sh &> /dev/null && \
-	petalinux-config --silentconfig --get-hw-description $(PLATFORM_DIR)/tmp
+	petalinux-config --silentconfig --get-hw-description $(PLATFORM_DIR)
 	@echo "********* Info: config hardware done *********"
 
 petalinux_replace_configs:
@@ -95,14 +99,14 @@ petalinux_qemu: petalinux_prebuild
 	. $(PETALINUX_DIR)/settings.sh &> /dev/null && \
 	petalinux-boot --qemu --prebuilt 3
 
-petalinux_create_dir:
+petalinux_create_dir: check_example
 	mkdir -p $(PLATFORM_DIR)
 	mkdir -p $(PETALINUX_BUILD_DIR)
 
 petalinux_clean:
 	rm -rf $(PETALINUX_BUILD_DIR)
 
-vivado_build: vivado_clean add_vivado_to_path
+vivado_build: check_example vivado_clean add_vivado_to_path
 	mkdir -p $(PLATFORM_DIR)
 	mkdir -p $(VIVADO_BUILD_DIR)
 	@if [ -z "$(EXAMPLE)" ]; then \
@@ -118,13 +122,13 @@ vivado_build: vivado_clean add_vivado_to_path
 			--example_dir $(EXAMPLE_DIR); \
 	fi
 
-platform_clean:
+platform_clean: check_example
 	rm -rf $(PLATFORM_DIR)
 
-vivado_clean:
-	rm -rf $(VIVADO_BUILD_DIR)
+vivado_clean: check_example
+	rm -rf $(VIVADO_BUILD_DIR)/$(PROJECT_NAME)
 
-create_vivado_project: vivado_clean add_vivado_to_path
+create_vivado_project: check_example vivado_clean add_vivado_to_path
 	mkdir -p $(VIVADO_BUILD_DIR)
 	@if [ -z "$(EXAMPLE)" ]; then \
 		vivado -mode gui -log $(VIVADO_BUILD_DIR)/vivado.log \
@@ -141,7 +145,7 @@ create_vivado_project: vivado_clean add_vivado_to_path
 			--example_dir $(EXAMPLE_DIR); \
 	fi
 
-vitis_build: vitis_clean
+vitis_build: check_example vitis_clean
 	mkdir -p $(VITIS_BUILD_DIR)
 	xsct $(VITIS_TCL_PATH) -tclargs \
 	 	--src $(EXAMPLE_SRC_DIR) \
@@ -157,7 +161,7 @@ vitis_build: vitis_clean
 vitis_clean:
 	rm -rf $(VITIS_BUILD_DIR)
 
-generate_device_tree: add_vivado_to_path device_tree_clean
+generate_device_tree: check_example add_vivado_to_path device_tree_clean
 	mkdir -p $(DT_BUILD_DIR)
 	xsct $(DTG_TCL_PATH) -tclargs \
 	 	--dt_dir $(DEVICE_TREE_GEN_DIR) \
@@ -177,7 +181,7 @@ generate_device_tree: add_vivado_to_path device_tree_clean
 		-x assembler-with-cpp -o devicetree.dts system-top.dts && \
 	dtc -I dts -O dtb -o devicetree.dtb devicetree.dts
 
-create_linux_package: boot_clean
+create_linux_package: check_example boot_clean
 	mkdir -p $(IMAGES_DIR)/$(PROJECT_NAME)/linux/boot
 	# copy bif and u-boot script
 	cp -f $(PWD)/scripts/boot.bif \
@@ -201,7 +205,7 @@ create_linux_package: boot_clean
 			$(IMAGES_DIR)/$(PROJECT_NAME)/linux/boot; \
 	fi
 
-boot_clean:
+boot_clean: check_example
 	rm -rf $(IMAGES_DIR)/$(PROJECT_NAME)/linux/boot
 
 device_tree_clean:
@@ -212,7 +216,7 @@ extract_rootfs: rootfs_clean
 	cd $(BUILD_DIR)/rootfs && \
 	gunzip -c $(PWD)/prebuilt/rootfs.cpio.gz | cpio -idmv
 
-build_rootfs: rootfs_image_clean
+build_rootfs: rootfs_image_clean build_linux_tools cp_linux_tools_2_rootfs
 	mkdir -p $(BUILD_DIR)/images/rootfs
 	cd $(BUILD_DIR)/rootfs && \
 	fakeroot sh -c 'chown -R 0:0 . && \
@@ -221,8 +225,23 @@ build_rootfs: rootfs_image_clean
 	cd $(BUILD_DIR)/images/rootfs && \
 	mkimage -A arm -O linux -T ramdisk -C gzip -d rootfs.cpio.gz uRamdisk
 
+build_linux_tools:
+	$(MAKE) -C $(PWD)/tools WORKSPACE_DIR=$(WORKSPACE_DIR)
+
+cp_linux_tools_2_rootfs:
+	cp -f $(BUILD_DIR)/tools/* $(BUILD_DIR)/rootfs/bin
+
 rootfs_clean:
 	rm -rf $(BUILD_DIR)/rootfs
 
 rootfs_image_clean:
 	rm -rf $(BUILD_DIR)/images/rootfs
+
+create_bin_bitstream: check_example check_xsa_file_exists
+	mkdir -p $(BUILD_DIR)/bitstream
+	@cd $(PLATFORM_DIR) && \
+	unzip -o $(PROJECT_NAME).xsa
+	@cp $(PLATFORM_DIR)/$(PROJECT_NAME).bit $(PLATFORM_DIR)/system.bit
+	@cd $(PLATFORM_DIR) && \
+	bootgen -image $(PWD)/scripts/system_bin.bif \
+		-arch zynq -o $(BUILD_DIR)/bitstream/$(PROJECT_NAME).bin -w

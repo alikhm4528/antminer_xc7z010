@@ -2,3 +2,7 @@ workspace
 .vscode
 .Xil
 repo
+*.o
+*.elf
+*.lst
+*.hex

@@ -4,19 +4,17 @@
 	module sample_generator_v1_0 #
 	(
 		// Users to add parameters here
-
+		parameter integer ROM_SIZE = 1024,
+		parameter INIT_FILE_NAME = "signal.mem",
 		// User parameters ends
 		// Do not modify the parameters beyond this line
-
 
 		// Parameters of Axi Slave Bus Interface S_AXIS
 		parameter integer C_S_AXIS_TDATA_WIDTH	= 32,
 
 		// Parameters of Axi Master Bus Interface M_AXIS
 		parameter integer C_M_AXIS_TDATA_WIDTH	= 32,
-		parameter integer C_M_AXIS_START_COUNT	= 32,
-		parameter integer ROM_SIZE = 1024,
-		parameter INIT_FILE_NAME = "signal.mem"
+		parameter integer C_M_AXIS_START_COUNT	= 32
 	)
 	(
 		// Users to add ports here
@@ -49,19 +47,6 @@
 	wire [(C_M_AXIS_TDATA_WIDTH/8)-1 : 0] tmp_axis_tstrb;
 	wire  tmp_axis_tlast;
 
-// Instantiation of Axi Bus Interface S_AXIS
-	// sample_generator_v1_0_S_AXIS # ( 
-	// 	.C_S_AXIS_TDATA_WIDTH(C_S_AXIS_TDATA_WIDTH)
-	// ) sample_generator_v1_0_S_AXIS_inst (
-	// 	.S_AXIS_ACLK(s_axis_aclk),
-	// 	.S_AXIS_ARESETN(s_axis_aresetn),
-	// 	.S_AXIS_TREADY(s_axis_tready),
-	// 	.S_AXIS_TDATA(s_axis_tdata),
-	// 	.S_AXIS_TSTRB(s_axis_tstrb),
-	// 	.S_AXIS_TLAST(s_axis_tlast),
-	// 	.S_AXIS_TVALID(s_axis_tvalid)
-	// );
-
 // Instantiation of Axi Bus Interface M_AXIS
 	sample_generator_v1_0_M_AXIS # ( 
 		.C_M_AXIS_TDATA_WIDTH(C_M_AXIS_TDATA_WIDTH),
@@ -80,6 +65,7 @@
 	);
 
 	// Add user logic here
+	// AXI MUX
 	assign m_axis_tvalid = (enable) ? ((fuse_sig_gen) ? (s_axis_tvalid) :
 		(tmp_axis_tvalid)) : 1'b0;
 	assign m_axis_tdata = (enable) ? ((fuse_sig_gen) ? (s_axis_tdata) :

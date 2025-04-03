@@ -194,9 +194,9 @@
 	          // when FIFO read signal is enabled.                                   
 	          begin                                                                  
 	            read_pointer <= read_pointer + 1;
-							mem_addr <= mem_addr + 1;
-							if(mem_addr == (ROM_SIZE-1))
-								mem_addr <= 0;
+	            mem_addr <= mem_addr + 1;
+	            if(mem_addr == (ROM_SIZE-1))
+	              mem_addr <= 0;
 	          end                                                                    
 	          tx_done <= 1'b0;                                                     
 	      end                                                                        
@@ -204,9 +204,9 @@
 	      begin                                                                      
 	        // tx_done is asserted when NUMBER_OF_OUTPUT_WORDS numbers of streaming data
 	        // has been out.
-					if(tx_done)                                                         
+	        if(tx_done)                                                         
 	        	read_pointer <= 0;
-					tx_done <= 1'b1;                                                         
+	        tx_done <= 1'b1;                                                         
 	      end                                                                        
 	end                                                                              
 

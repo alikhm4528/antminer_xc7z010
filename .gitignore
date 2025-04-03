@@ -1,7 +1,7 @@
 workspace
 .vscode
 .Xil
-repo
+repo/vivado-library
 *.o
 *.elf
 *.lst
